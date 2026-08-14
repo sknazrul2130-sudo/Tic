@@ -1,0 +1,26 @@
+{
+  "name": "tic-tac-toe-online",
+  "version": "4.0.0",
+  "description": "Modern Tic Tac Toe: PvP, PvC AI, Online Multiplayer, Tournament brackets, best-of-3 matches, animated emoji reactions, and a coins/gems cosmetic market.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "tic-tac-toe",
+    "game",
+    "websocket",
+    "multiplayer",
+    "tournament",
+    "html5"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
