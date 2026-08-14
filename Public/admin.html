@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tic Tac Toe · Admin Dashboard</title>
+<style>
+:root{
+  --bg1:#0f0f1a; --bg2:#1a1a2e;
+  --accent1:#00f5ff; --accent2:#ff2e63; --accent3:#ffb300; --good:#4ade80;
+  --glass: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.12);
+  --text:#f2f2f7; --muted:#9a9ab0;
+}
+*{ box-sizing:border-box; }
+body{
+  margin:0; min-height:100vh; font-family:'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  background: radial-gradient(circle at 20% 10%, rgba(0,245,255,0.08), transparent 40%),
+              radial-gradient(circle at 80% 90%, rgba(255,46,99,0.08), transparent 40%),
+              linear-gradient(160deg, var(--bg1), var(--bg2));
+  color:var(--text); padding:20px;
+}
+.wrap{ max-width:1000px; margin:0 auto; }
+h1{ font-size:22px; margin:0 0 4px; display:flex; align-items:center; gap:10px; }
+h1 svg{ width:26px; height:26px; }
+.muted{ color:var(--muted); font-size:13px; }
+.glass{ background:var(--glass); backdrop-filter:blur(14px); border:1px solid var(--glass-border); border-radius:16px; }
+.card{ padding:20px; margin-top:16px; }
+input, textarea{
+  font-family:inherit; font-size:14px; padding:11px 13px; border-radius:10px; border:1px solid var(--glass-border);
+  background:rgba(255,255,255,0.05); color:var(--text); width:100%;
+}
+input::placeholder, textarea::placeholder{ color:var(--muted); }
+button{
+  font-family:inherit; font-size:14px; font-weight:600; color:var(--text);
+  background:var(--glass); border:1px solid var(--glass-border); border-radius:10px;
+  padding:10px 16px; cursor:pointer;
+}
+button.primary{ background:linear-gradient(135deg,var(--accent1),#0072ff); border:none; color:#031014; }
+button.danger{ background:linear-gradient(135deg,var(--accent2),#ff7a18); border:none; color:#1a0206; }
+button:hover{ filter:brightness(1.08); }
+button:disabled{ opacity:.4; cursor:not-allowed; }
+.row{ display:flex; gap:10px; flex-wrap:wrap; }
+.row > *{ flex:1; min-width:160px; }
+
+#login-screen{ max-width:420px; margin:60px auto 0; }
+#login-screen .card{ display:flex; flex-direction:column; gap:12px; }
+
+#dashboard{ display:none; }
+#dashboard.show{ display:block; }
+
+.stat-row{ display:flex; gap:12px; flex-wrap:wrap; }
+.stat-pill{ flex:1; min-width:120px; padding:14px; border-radius:14px; text-align:center; }
+.stat-pill .num{ font-size:24px; font-weight:800; }
+.stat-pill .lbl{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+
+.section-title{ font-size:14px; font-weight:700; margin:0 0 12px; display:flex; align-items:center; justify-content:space-between; }
+.section-title .count{ color:var(--muted); font-weight:500; font-size:12px; }
+
+.item-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px;
+  border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); margin-bottom:8px;
+}
+.item-row .meta{ min-width:0; }
+.item-row .code{ font-weight:800; letter-spacing:1px; font-size:14px; }
+.item-row .sub{ font-size:12px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.item-row button{ flex:none; padding:8px 12px; font-size:12px; }
+.empty{ color:var(--muted); font-size:13px; padding:10px 2px; }
+
+.badge{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; margin-left:6px; }
+.badge.live{ background:rgba(74,222,128,0.15); color:var(--good); }
+.badge.elim{ background:rgba(248,113,113,0.15); color:#f87171; }
+
+.status-line{ font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+.dot{ width:8px; height:8px; border-radius:50%; background:var(--good); }
+.dot.off{ background:#f87171; }
+
+#error-box{ color:#f87171; font-size:13px; min-height:18px; }
+.toolbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+.toolbar .status-line{ margin-left:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <section id="login-screen">
+    <h1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin Dashboard
+    </h1>
+    <div class="muted">Manage rooms, tournaments, and connected players.</div>
+    <div class="card glass">
+      <label class="muted">Server address</label>
+      <input type="text" id="server-url" placeholder="http://localhost:8080">
+      <label class="muted">Admin key</label>
+      <input type="password" id="admin-key" placeholder="Enter admin key">
+      <button class="primary" id="login-btn">Connect</button>
+      <div id="error-box"></div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard">
+    <h1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin Dashboard
+    </h1>
+    <div class="muted" id="server-label"></div>
+
+    <div class="stat-row" style="margin-top:16px;">
+      <div class="stat-pill glass"><div class="num" id="stat-connected">0</div><div class="lbl">Connected</div></div>
+      <div class="stat-pill glass"><div class="num" id="stat-rooms">0</div><div class="lbl">Active Rooms</div></div>
+      <div class="stat-pill glass"><div class="num" id="stat-tournaments">0</div><div class="lbl">Tournaments</div></div>
+      <div class="stat-pill glass"><div class="num" id="stat-uptime">0s</div><div class="lbl">Uptime</div></div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Broadcast a message</div>
+      <div class="row">
+        <input type="text" id="broadcast-input" placeholder="Message to send to every connected player…" maxlength="500">
+        <button class="primary" id="broadcast-btn" style="flex:none;">Send to Everyone</button>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Connected Players <span class="count" id="players-count">0</span></div>
+      <div id="players-list"></div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Quick-Match Rooms <span class="count" id="rooms-count">0</span></div>
+      <div id="rooms-list"></div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Tournaments <span class="count" id="tournaments-count">0</span></div>
+      <div id="tournaments-list"></div>
+    </div>
+
+    <div class="toolbar">
+      <button id="refresh-btn">Refresh Now</button>
+      <button id="logout-btn">Log Out</button>
+      <div class="status-line"><span class="dot" id="conn-dot"></span><span id="conn-text">connected</span></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const state = {
+  serverUrl: '',
+  adminKey: '',
+  pollTimer: null,
+  connected: false,
+};
+
+const els = {
+  login: document.getElementById('login-screen'),
+  dashboard: document.getElementById('dashboard'),
+  serverUrlInput: document.getElementById('server-url'),
+  adminKeyInput: document.getElementById('admin-key'),
+  loginBtn: document.getElementById('login-btn'),
+  errorBox: document.getElementById('error-box'),
+  serverLabel: document.getElementById('server-label'),
+};
+
+els.serverUrlInput.value = location.origin;
+
+try{
+  const savedUrl = sessionStorage.getItem('ttt-admin-url');
+  const savedKey = sessionStorage.getItem('ttt-admin-key');
+  if(savedUrl) els.serverUrlInput.value = savedUrl;
+  if(savedKey) els.adminKeyInput.value = savedKey;
+}catch(e){}
+
+function apiUrl(path){
+  return state.serverUrl.replace(/\/$/, '') + path;
+}
+
+async function apiCall(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({ 'x-admin-key': state.adminKey }, opts.headers || {});
+  if(opts.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(apiUrl(path), {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if(res.status === 401){ throw new Error('Invalid admin key'); }
+  if(!res.ok){ throw new Error('Request failed (' + res.status + ')'); }
+  return res.json();
+}
+
+els.loginBtn.addEventListener('click', async ()=>{
+  state.serverUrl = els.serverUrlInput.value.trim().replace(/\/$/, '') || location.origin;
+  state.adminKey = els.adminKeyInput.value.trim();
+  els.errorBox.textContent = '';
+  if(!state.adminKey){ els.errorBox.textContent = 'Enter the admin key.'; return; }
+
+  els.loginBtn.disabled = true; els.loginBtn.textContent = 'Connecting…';
+  try{
+    await apiCall('/admin/api/state');
+    try{
+      sessionStorage.setItem('ttt-admin-url', state.serverUrl);
+      sessionStorage.setItem('ttt-admin-key', state.adminKey);
+    }catch(e){}
+    els.login.style.display = 'none';
+    els.dashboard.classList.add('show');
+    els.serverLabel.textContent = state.serverUrl;
+    startPolling();
+  }catch(e){
+    els.errorBox.textContent = e.message || 'Could not connect.';
+  }
+  els.loginBtn.disabled = false; els.loginBtn.textContent = 'Connect';
+});
+
+document.getElementById('logout-btn').addEventListener('click', ()=>{
+  stopPolling();
+  try{ sessionStorage.removeItem('ttt-admin-key'); }catch(e){}
+  els.dashboard.classList.remove('show');
+  els.login.style.display = 'block';
+});
+
+document.getElementById('refresh-btn').addEventListener('click', refresh);
+
+document.getElementById('broadcast-btn').addEventListener('click', async ()=>{
+  const input = document.getElementById('broadcast-input');
+  const text = input.value.trim();
+  if(!text) return;
+  try{
+    await apiCall('/admin/api/broadcast', { method:'POST', body:{ message: text } });
+    input.value = '';
+  }catch(e){ alert('Broadcast failed: ' + e.message); }
+});
+
+function fmtUptime(sec){
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  if(h) return `${h}h ${m}m`;
+  if(m) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function renderRow(container, opts){
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.innerHTML = `<div class="code">${opts.title}</div><div class="sub">${opts.sub}</div>`;
+  row.appendChild(meta);
+  if(opts.actions){
+    const btnWrap = document.createElement('div');
+    btnWrap.style.display = 'flex'; btnWrap.style.gap = '6px';
+    opts.actions.forEach(a=>{
+      const b = document.createElement('button');
+      b.textContent = a.label;
+      b.className = a.danger ? 'danger' : '';
+      b.addEventListener('click', a.onClick);
+      btnWrap.appendChild(b);
+    });
+    row.appendChild(btnWrap);
+  }
+  container.appendChild(row);
+}
+
+async function refresh(){
+  try{
+    const data = await apiCall('/admin/api/state');
+    document.getElementById('conn-dot').classList.remove('off');
+    document.getElementById('conn-text').textContent = 'connected';
+
+    document.getElementById('stat-connected').textContent = data.connectedCount;
+    document.getElementById('stat-rooms').textContent = data.rooms.length;
+    document.getElementById('stat-tournaments').textContent = data.tournaments.length;
+    document.getElementById('stat-uptime').textContent = fmtUptime(data.uptimeSec);
+
+    // Players
+    const playersList = document.getElementById('players-list');
+    playersList.innerHTML = '';
+    document.getElementById('players-count').textContent = data.connections.length;
+    if(data.connections.length === 0){
+      playersList.innerHTML = '<div class="empty">No players connected.</div>';
+    } else {
+      data.connections.forEach(c=>{
+        const where = c.tournament ? `tournament ${c.tournament}` : (c.roomCode ? `room ${c.roomCode}` : 'in menu');
+        renderRow(playersList, {
+          title: c.name,
+          sub: `${where} · connected ${fmtUptime(c.connectedForSec)}`,
+          actions: [
+            { label:'Warn', onClick: ()=> warnPlayer(c.id, c.name) },
+            { label:'Kick', danger:true, onClick: ()=> kick(c.id, c.name) },
+          ],
+        });
+      });
+    }
+
+    // Rooms
+    const roomsList = document.getElementById('rooms-list');
+    roomsList.innerHTML = '';
+    document.getElementById('rooms-count').textContent = data.rooms.length;
+    if(data.rooms.length === 0){
+      roomsList.innerHTML = '<div class="empty">No active quick-match rooms.</div>';
+    } else {
+      data.rooms.forEach(r=>{
+        const names = r.players.map(p=> `${p.name} (${p.symbol||'?'})`).join(' vs ') || 'waiting…';
+        renderRow(roomsList, {
+          title: r.code,
+          sub: names,
+          actions: [{ label:'Close Room', danger:true, onClick: ()=> closeRoom(r.code) }],
+        });
+      });
+    }
+
+    // Tournaments
+    const tList = document.getElementById('tournaments-list');
+    tList.innerHTML = '';
+    document.getElementById('tournaments-count').textContent = data.tournaments.length;
+    if(data.tournaments.length === 0){
+      tList.innerHTML = '<div class="empty">No active tournaments.</div>';
+    } else {
+      data.tournaments.forEach(t=>{
+        const playerBadges = t.players.map(p=> `${p.name}${p.eliminated ? ' <span class="badge elim">out</span>' : ' <span class="badge live">in</span>'}`).join(', ');
+        const matchSummary = t.matches.map(m=> m.bye ? `${m.p1} (bye)` : `${m.p1||'?'} vs ${m.p2||'?'}${m.winner ? ' → ' + m.winner : ''}`).join(' · ') || 'pairing…';
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `<div class="meta">
+            <div class="code">${t.code} <span class="badge live">${t.players.length}/${t.size}</span> · round ${t.round}</div>
+            <div class="sub">${playerBadges}</div>
+            <div class="sub">${matchSummary}</div>
+          </div>`;
+        const btn = document.createElement('button');
+        btn.textContent = 'Cancel Tournament';
+        btn.className = 'danger';
+        btn.style.flex = 'none';
+        btn.addEventListener('click', ()=> closeTournament(t.code));
+        row.appendChild(btn);
+        tList.appendChild(row);
+      });
+    }
+  }catch(e){
+    document.getElementById('conn-dot').classList.add('off');
+    document.getElementById('conn-text').textContent = e.message || 'connection lost';
+  }
+}
+
+async function warnPlayer(id, name){
+  const message = prompt(`Send a warning to ${name}:`);
+  if(!message || !message.trim()) return;
+  try{ await apiCall('/admin/api/warn', { method:'POST', body:{ id, message: message.trim() } }); }
+  catch(e){ alert('Warn failed: ' + e.message); }
+}
+async function kick(id, name){
+  if(!confirm(`Disconnect ${name}?`)) return;
+  try{ await apiCall('/admin/api/kick', { method:'POST', body:{ id } }); refresh(); }
+  catch(e){ alert('Kick failed: ' + e.message); }
+}
+async function closeRoom(code){
+  if(!confirm(`Close room ${code}? Both players will be disconnected from the match.`)) return;
+  try{ await apiCall('/admin/api/close-room', { method:'POST', body:{ code } }); refresh(); }
+  catch(e){ alert('Close room failed: ' + e.message); }
+}
+async function closeTournament(code){
+  if(!confirm(`Cancel tournament ${code}? All players will be notified.`)) return;
+  try{ await apiCall('/admin/api/close-tournament', { method:'POST', body:{ code } }); refresh(); }
+  catch(e){ alert('Cancel tournament failed: ' + e.message); }
+}
+
+function startPolling(){
+  refresh();
+  stopPolling();
+  state.pollTimer = setInterval(refresh, 4000);
+}
+function stopPolling(){
+  if(state.pollTimer) clearInterval(state.pollTimer);
+  state.pollTimer = null;
+}
+
+document.getElementById('broadcast-input').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('broadcast-btn').click();
+});
+
+// Auto-login if a key was saved this session
+if(els.adminKeyInput.value){
+  els.loginBtn.click();
+}
+})();
+</script>
+</body>
+</html>
